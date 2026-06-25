@@ -1,0 +1,19 @@
+name = "zia-admin-db"
+main = "worker_admin_db.js"
+compatibility_date = "2026-06-25"
+type = "javascript"
+
+# Replace the placeholders below with your Cloudflare Account and KV IDs.
+account_id = "YOUR_ACCOUNT_ID"
+workers_dev = true
+
+[build]
+command = ""
+
+[[kv_namespaces]]
+binding = "ADMIN_DB"
+id = "d7d7e26bf0104b808e21c7c9beb3ed75"
+
+# Optional: to publish on a custom domain/route, add a route entry and zone_id:
+# routes = ["example.com/admin/*"]
+# zone_id = "YOUR_ZONE_ID"

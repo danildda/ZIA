@@ -1151,8 +1151,8 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <div class="header">
-        <img src="/logo" alt="OPUS" class="header-logo">
-    </div>
+    <img src="/logo?v=4" alt="OPUS" class="header-logo">
+</div>
     <div class="chat-container" id="chat-container">
         <div class="message bot-message"><span class="message-prefix">ZIA:</span> <span>Olá! Sou ZIA, a inteligência artificial da Opus.</span></div>
     </div>

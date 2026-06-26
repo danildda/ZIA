@@ -1186,8 +1186,9 @@ HTML_TEMPLATE = """
 
     <script>
         let currentContext = null;
-        let selectedPES = null;
-        let attachedFile = null;
+let selectedPES = null;
+let attachedFile = null;
+let catalogoModulos = [];
 
         function setStatus(msg) {
             const el = document.getElementById('status');
@@ -1279,64 +1280,98 @@ HTML_TEMPLATE = """
             chatContainer.appendChild(container);
         }
 
-        function promptContext() {
-            addMessageAnimated('Por favor, escolha um módulo:', false);
-            renderOptions([
-                { label: 'Orçamento', value: 'orcamento' },
-                { label: 'Qualidade', value: 'qualidade' }
-            ], mode => {
-                currentContext = mode;
-                selectedPES = null;
-                addMessageAnimated(`Modo selecionado: ${mode}`);
-                if (mode === 'qualidade') {
-                    promptPES();
-                    setStatus('Qualidade selecionada: escolha o PES.');
-                } else if (mode === 'orcamento') {
-                    promptOrcamento();
-                    setStatus('Orçamento selecionado: escolha o tipo de Orçamento.');
-                } else {
-                    renderOptions([], ()=>{});
-                    setStatus(`Modo ${mode} ativo. Faça sua pergunta.`);
-                }
-            });
+        async function carregarCatalogo() {
+    try {
+        const response = await fetch('/api/catalogo');
+        const data = await response.json();
+
+        if (data && data.sucesso && Array.isArray(data.modulos)) {
+            catalogoModulos = data.modulos;
+        }
+    } catch (err) {
+        console.error('Erro ao carregar catálogo:', err);
+    }
+
+    if (!catalogoModulos.length) {
+        catalogoModulos = [
+            {
+                chave: 'orcamento',
+                nome: 'Orçamento',
+                submodulos: []
+            },
+            {
+                chave: 'qualidade',
+                nome: 'Qualidade',
+                submodulos: []
+            }
+        ];
+    }
+}
+
+function getModuloAtual() {
+    return catalogoModulos.find(function(m) {
+        return m.chave === currentContext;
+    });
+}
+
+function moduloExigeSubmodulo() {
+    const modulo = getModuloAtual();
+    return modulo && modulo.submodulos && modulo.submodulos.length > 0;
+}
+
+function promptContext() {
+    addMessageAnimated('Por favor, escolha um módulo:', false);
+
+    renderOptions(catalogoModulos.map(function(modulo) {
+        return {
+            label: modulo.nome,
+            value: modulo.chave
+        };
+    }), function(chaveModulo) {
+        const modulo = catalogoModulos.find(function(m) {
+            return m.chave === chaveModulo;
+        });
+
+        if (!modulo) {
+            addMessageAnimated('Módulo não encontrado.', false);
+            return;
         }
 
-        function promptPES() {
-            const pesList = [
-                'contencao_solos','reboco_interno','contrapiso','elevacao_alvenaria','estrutura_concreto_armado','revestimento_ceramico','revestimento_externo','pintura_interna_lisa','pintura_externa_texturizada','piso_subsolo','forro_gesso','desengrosso_limpeza_final','guarda_corpo_ferro','instalacoes_gas_multicamada','instalacao_metais','instalacao_loucas','esquadrias_aluminio','esquadrias_madeira','divisorias_gesso','piso_borracha_playground','monitoramento_deslocamento_vertical','rede_frigorígena'
-            ];
-            renderOptions(pesList.map(pes => ({ 
-                label: pes.replace(/_/g, ' ')
-                    .split(' ')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' '), 
-                value: pes 
-            })), pes => {
-                selectedPES = pes;
-                const label = pes.replace(/_/g, ' ')
-                    .split(' ')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
-                renderOptions([], ()=>{});
-                addMessageAnimated(`Tag selecionada: ${label}`, false);
-                setStatus(`Qualidade - PES: ${label}. Faça sua pergunta.`);
-            });
-        }
+        currentContext = modulo.chave;
+        selectedPES = null;
 
-        function promptOrcamento() {
-            const orcamentoOptions = [
-                { value: 'sense', label: 'SENSE' },
-                { value: 'corporate', label: 'CORPORATE' },
-                { value: 'passeo', label: 'PASSEO' }
-            ];
-            renderOptions(orcamentoOptions, option => {
-                selectedPES = option;
-                const optionLabel = orcamentoOptions.find(opt => opt.value === option).label;
-                renderOptions([], ()=>{});
-                addMessageAnimated(`Tag selecionada: ${optionLabel}`, false);
-                setStatus(`Orçamento - ${optionLabel}. Faça sua pergunta.`);
-            });
+        addMessageAnimated('Modo selecionado: ' + modulo.nome, false);
+
+        if (modulo.submodulos && modulo.submodulos.length > 0) {
+            promptSubmodulos(modulo);
+            setStatus(modulo.nome + ' selecionado: escolha uma opção.');
+        } else {
+            renderOptions([], function() {});
+            setStatus(modulo.nome + ' ativo. Faça sua pergunta.');
         }
+    });
+}
+
+function promptSubmodulos(modulo) {
+    renderOptions(modulo.submodulos.map(function(sub) {
+        return {
+            label: sub.nome,
+            value: sub.chave
+        };
+    }), function(chaveSubmodulo) {
+        const sub = modulo.submodulos.find(function(s) {
+            return s.chave === chaveSubmodulo;
+        });
+
+        const label = sub ? sub.nome : chaveSubmodulo;
+
+        selectedPES = chaveSubmodulo;
+
+        renderOptions([], function() {});
+        addMessageAnimated('Tag selecionada: ' + label, false);
+        setStatus(modulo.nome + ' - ' + label + '. Faça sua pergunta.');
+    });
+}
 
         // File handling (anexo via clip no prompt)
         const attachBtn = document.getElementById('attach-btn');
@@ -1609,10 +1644,10 @@ HTML_TEMPLATE = """
                 addMessageAnimated('Por favor, selecione primeiro Geral, Orçamento ou Qualidade.', false);
                 return;
             }
-            if ((currentContext === 'qualidade' || currentContext === 'orcamento') && !selectedPES) {
-                addMessageAnimated('Por favor, escolha uma opção antes de enviar a pergunta.', false);
-                return;
-            }
+            if (moduloExigeSubmodulo() && !selectedPES) {
+    addMessageAnimated('Por favor, escolha uma opção antes de enviar a pergunta.', false);
+    return;
+}
 
             addTypingIndicator();
 
@@ -1702,8 +1737,10 @@ HTML_TEMPLATE = """
         // iniciar com prompt de modo
         console.log('Iniciando promptContext...');
         setTimeout(function() {
-            promptContext();
-        }, 500);
+    carregarCatalogo().then(function() {
+        promptContext();
+    });
+}, 500);
     </script>
 </body>
 </html>

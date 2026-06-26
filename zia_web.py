@@ -1825,12 +1825,50 @@ def admin_deletar_conteudo_endpoint(conteudo_id):
 def status():
     return jsonify({'chatgpt_enabled': CHATGPT_HABILITADO})
 
+
+def enviar_imagem_sem_cache(caminho, mimetype='image/png'):
+    response = send_file(caminho, mimetype=mimetype)
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@app.route('/logo')
+def logo():
+    nomes_possiveis = [
+        'OPUS.png',
+        'OPUS.PNG',
+        'Opus.png',
+        'opus.png',
+        'logo.png',
+        'Logo.png'
+    ]
+
+    for nome in nomes_possiveis:
+        logo_path = os.path.join(BASE_DIR, nome)
+        if os.path.exists(logo_path):
+            return enviar_imagem_sem_cache(logo_path, 'image/png')
+
+    return 'Logo não encontrada. Envie o arquivo OPUS.png na mesma pasta do zia_web.py.', 404
+
+
 @app.route('/favicon')
 def favicon():
-    favicon_path = os.path.join(BASE_DIR, 'favicon.png')
-    if os.path.exists(favicon_path):
-        return send_file(favicon_path, mimetype='image/png')
+    nomes_possiveis = [
+        'favicon.png',
+        'FAVICON.png',
+        'icone.png',
+        'Icone.png'
+    ]
+
+    for nome in nomes_possiveis:
+        favicon_path = os.path.join(BASE_DIR, nome)
+        if os.path.exists(favicon_path):
+            return enviar_imagem_sem_cache(favicon_path, 'image/png')
+
     return '', 404
+
 
 def build_quality_combined_base():
     combined = []

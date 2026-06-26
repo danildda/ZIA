@@ -695,6 +695,8 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZIA Web</title>
+    <link rel="icon" type="image/png" href="/favicon">
+    <link rel="shortcut icon" type="image/png" href="/favicon">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -1823,11 +1825,11 @@ def admin_deletar_conteudo_endpoint(conteudo_id):
 def status():
     return jsonify({'chatgpt_enabled': CHATGPT_HABILITADO})
 
-@app.route('/logo')
-def logo():
-    logo_path = os.path.join(BASE_DIR, 'OPUS.png')
-    if os.path.exists(logo_path):
-        return send_file(logo_path, mimetype='image/png')
+@app.route('/favicon')
+def favicon():
+    favicon_path = os.path.join(BASE_DIR, 'favicon.png')
+    if os.path.exists(favicon_path):
+        return send_file(favicon_path, mimetype='image/png')
     return '', 404
 
 def build_quality_combined_base():
